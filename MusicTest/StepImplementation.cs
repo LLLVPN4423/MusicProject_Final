@@ -16,7 +16,7 @@ namespace MusicTest
         {
             // --- SỬA LỖI: CHỈ ĐỊNH ĐƯỜNG DẪN TUYỆT ĐỐI ---
             // Vì bạn đang dùng ổ D, ta điền thẳng đường dẫn vào đây để tránh bị Gauge lừa sang ổ C.
-            string appPath = @"D:\MusicProject_Final\MusicApp\bin\Debug\net9.0-windows\MusicApp.exe";
+            string appPath = @"E:\MusicProject_Final\MusicApp\bin\Debug\net9.0-windows\MusicApp.exe";
 
             Console.WriteLine("--------------------------------------------------");
             Console.WriteLine("Đang mở App tại: " + appPath);

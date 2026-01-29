@@ -3,10 +3,341 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:MusicApp"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Music Player"
+        Height="800"
+        Width="1400"
+        MinHeight="640"
+        MinWidth="1200"
+        FontFamily="Bahnschrift"
+        Background="#6F6B69"
+        WindowStartupLocation="CenterScreen"
+        >
+    <Window.Resources>
+        <SolidColorBrush x:Key="BaseBgBrush" Color="#6F6B69"/>
+        <SolidColorBrush x:Key="SidebarBrush" Color="#5B5755"/>
+        <SolidColorBrush x:Key="PanelBrush" Color="#807B79"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#C07CC7"/>
+        <SolidColorBrush x:Key="SoftWhiteBrush" Color="#F4F0EC"/>
 
+        <Style x:Key="SidebarButtonStyle" TargetType="Button">
+            <Setter Property="Margin" Value="0,6,0,0"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="#F8F6F5"/>
+            <Setter Property="Background" Value="#726E6C"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+
+        <Style x:Key="TransportButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="96"/>
+            <Setter Property="Height" Value="52"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#3C3A39"/>
+            <Setter Property="Background" Value="#F6F5F2"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="14">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ListViewItemStyle" TargetType="ListViewItem">
+            <Setter Property="Padding" Value="8"/>
+            <Setter Property="Margin" Value="0,2"/>
+            <Setter Property="Foreground" Value="#2F2D2C"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border x:Name="itemBorder"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6">
+                            <ContentPresenter Margin="4"
+                                              HorizontalAlignment="Stretch"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="itemBorder" Property="Background" Value="#EDEAE8"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="itemBorder" Property="Background" Value="#C07CC7"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource BaseBgBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Sidebar -->
+        <Border Grid.Column="0" Background="#5C5856">
+            <StackPanel Margin="26,32">
+                <TextBlock Text="logo"
+                           FontSize="36"
+                           FontWeight="Bold"
+                           Foreground="#F1EFEB"/>
+
+                <Button x:Name="btnMenu"
+                        Content="Menu"
+                        Style="{StaticResource SidebarButtonStyle}"
+                        Click="MenuButton_Click"
+                        Margin="0,14,0,0"/>
+
+                <StackPanel x:Name="menuItemsPanel"
+                            Visibility="Collapsed"
+                            Margin="0,10,0,0">
+                    <Button x:Name="btnOpenFile"
+                            Content="Open File"
+                            Style="{StaticResource SidebarButtonStyle}"
+                            Click="BtnOpenFile_Click"
+                            Margin="0,0,0,10"/>
+                    <Button Content="List"
+                            Style="{StaticResource SidebarButtonStyle}"
+                            Margin="0,0,0,10"/>
+                    <Border Height="36" Background="#E5E2DF" CornerRadius="6" Margin="0,0,0,10"/>
+                    <Border Height="36" Background="#E5E2DF" CornerRadius="6" Margin="0,0,0,10"/>
+                    <Border Height="36" Background="#E5E2DF" CornerRadius="6" Margin="0,0,0,10"/>
+                    <Border Height="36" Background="#E5E2DF" CornerRadius="6" Margin="0,0,0,10"/>
+                    <Border Height="36" Background="#E5E2DF" CornerRadius="6" Margin="0,0,0,10"/>
+                    <Border Height="36" Background="#E5E2DF" CornerRadius="6" Margin="0,0,0,10"/>
+                    <Border Height="36" Background="#E5E2DF" CornerRadius="6"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Surface -->
+        <Grid Grid.Column="1" Background="#7C7876">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="Main Player Screen"
+                       FontSize="20"
+                       Foreground="#EDE9E6"
+                       HorizontalAlignment="Center"
+                       Margin="0,24,0,24"/>
+
+            <Grid Grid.Row="1" Margin="60,0,60,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Margin="0,0,30,0">
+                    <Border Background="#FDFBFA"
+                            CornerRadius="22"
+                            Height="320"
+                            Padding="30">
+                        <Border Background="#FFFFFF"
+                                CornerRadius="18"
+                                BorderBrush="#D8D4D2"
+                                BorderThickness="1">
+                            <Grid>
+                                <MediaElement x:Name="videoPreview"
+                                              LoadedBehavior="Manual"
+                                              UnloadedBehavior="Manual"
+                                              Stretch="Uniform"
+                                              Visibility="Collapsed"
+                                              IsMuted="True"/>
+                                <Image x:Name="imgPreview"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Visibility="Collapsed"/>
+                                <TextBlock x:Name="lblImagePlaceholder"
+                                           Text="Image"
+                                           FontSize="48"
+                                           Foreground="#C3BEBB"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </Border>
+
+                    <StackPanel Margin="0,26,0,0">
+                        <TextBlock Text="Tên bài hát"
+                                   Foreground="#D6D1CF"
+                                   FontSize="12"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock x:Name="lblTrackTitle"
+                                   Text="Chưa có bài hát"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Ca sĩ"
+                                   Foreground="#D6D1CF"
+                                   FontSize="12"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock x:Name="lblArtist"
+                                   Text="Thêm bài hát để bắt đầu"
+                                   Foreground="#F7F3F0"
+                                   FontSize="16"
+                                   Margin="0,4,0,20"/>
+
+                        <TextBlock Text="Trạng thái"
+                                   Foreground="#D6D1CF"
+                                   FontSize="12"
+                                   Margin="0,0,0,4"/>
+                        <TextBlock x:Name="lblStatus"
+                                   Text="Idle"
+                                   Foreground="#F7F3F0"
+                                   FontSize="16"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <Border Grid.Column="1"
+                        Background="#A29D9A"
+                        CornerRadius="18"
+                        Padding="18">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0" Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="60"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="70"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="STT"
+                                       Foreground="#F2EFEA"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Title"
+                                       Grid.Column="1"
+                                       Foreground="#F2EFEA"
+                                       FontWeight="Bold"/>
+                            <TextBlock Text="Singer"
+                                       Grid.Column="2"
+                                       Foreground="#F2EFEA"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Time"
+                                       Grid.Column="3"
+                                       Foreground="#F2EFEA"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Center"/>
+                        </Grid>
+
+                        <ListView Grid.Row="1"
+                                  x:Name="lvPlaylist"
+                                  ItemsSource="{Binding Playlist}"
+                                  BorderThickness="0"
+                                  Background="#D8D4D2"
+                                  ItemContainerStyle="{StaticResource ListViewItemStyle}"
+                                  SelectionMode="Single"
+                                  MouseDoubleClick="LvPlaylist_MouseDoubleClick">
+                            <ListView.View>
+                                <GridView AllowsColumnReorder="False">
+                                    <GridViewColumn Header="STT" Width="60" DisplayMemberBinding="{Binding Sequence}"/>
+                                    <GridViewColumn Header="Title" Width="140" DisplayMemberBinding="{Binding Title}"/>
+                                    <GridViewColumn Header="Singer" Width="100" DisplayMemberBinding="{Binding Artist}"/>
+                                    <GridViewColumn Header="Time" Width="70" DisplayMemberBinding="{Binding DurationText}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Grid Grid.Row="2" Margin="80,20,80,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="0" Margin="0,0,20,0">
+                    <Border Background="#BEB9B7"
+                            Height="10"
+                            VerticalAlignment="Center"
+                            CornerRadius="5"/>
+                    <Slider x:Name="sldProgress"
+                            Minimum="0"
+                            Maximum="1"
+                            Value="0"
+                            Background="Transparent"
+                            Height="14"
+                            Foreground="#C07CC7"
+                            Thumb.DragStarted="Progress_DragStarted"
+                            Thumb.DragCompleted="Progress_DragCompleted"
+                            PreviewMouseLeftButtonUp="Progress_MouseLeftButtonUp"/>
+                </Grid>
+
+                <TextBlock x:Name="lblTimeDisplay"
+                           Grid.Column="1"
+                           Text="00:00 / 00:00"
+                           Foreground="#F4F0EC"
+                           FontSize="14"
+                           VerticalAlignment="Center"/>
+            </Grid>
+
+            <Border Grid.Row="3"
+                    Margin="180,26"
+                    Background="#8D8886"
+                    CornerRadius="44"
+                    Height="110">
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center">
+                    <Button x:Name="btnPrev"
+                            Content="Prev"
+                            Style="{StaticResource TransportButtonStyle}"
+                            Margin="0,0,34,0"
+                            Click="BtnPrev_Click"/>
+                    <Button x:Name="btnPause"
+                            Content="Pause"
+                            Background="#F1B3B3"
+                            Foreground="White"
+                            Style="{StaticResource TransportButtonStyle}"
+                            Margin="0,0,34,0"
+                            Click="BtnPause_Click"/>
+                    <Button x:Name="btnNext"
+                            Content="Next"
+                            Style="{StaticResource TransportButtonStyle}"
+                            Click="BtnNext_Click"/>
+                </StackPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>
