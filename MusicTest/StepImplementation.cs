@@ -14,24 +14,36 @@ namespace MusicTest
         [Step("Mở App Music Player")]
         public void OpenMusicPlayerApp()
         {
-            // --- SỬA LỖI: CHỈ ĐỊNH ĐƯỜNG DẪN TUYỆT ĐỐI ---
-            // Vì bạn đang dùng ổ D, ta điền thẳng đường dẫn vào đây để tránh bị Gauge lừa sang ổ C.
-            string appPath = @"E:\MusicProject_Final\MusicApp\bin\Debug\net9.0-windows\MusicApp.exe";
+            // --- CÁCH MỚI: TỰ ĐỘNG TÌM ĐƯỜNG DẪN ---
+            
+            // 1. Lấy thư mục nơi bạn đang đứng chạy lệnh (thường là folder MusicTest)
+            string baseDir = Directory.GetCurrentDirectory();
+
+            // 2. Dùng ".." để lùi ra ngoài folder MusicTest, rồi đi vào MusicApp
+            // Cấu trúc: MusicTest/../MusicApp/bin/Debug/net9.0-windows/MusicApp.exe
+            string relativePath = Path.Combine(baseDir, "..", "MusicApp", "bin", "Debug", "net9.0-windows", "MusicApp.exe");
+
+            // 3. Chuyển nó thành đường dẫn tuyệt đối sạch sẽ
+            string appPath = Path.GetFullPath(relativePath);
 
             Console.WriteLine("--------------------------------------------------");
-            Console.WriteLine("Đang mở App tại: " + appPath);
+            Console.WriteLine("Đang tìm App tại: " + appPath); 
             Console.WriteLine("--------------------------------------------------");
 
             if (!File.Exists(appPath))
             {
-                 throw new FileNotFoundException($"KHÔNG TÌM THẤY APP!\nFile không tồn tại ở: {appPath}\n--> Hãy kiểm tra lại xem bạn đã 'dotnet build' MusicApp chưa?");
+                 // Gợi ý lỗi chi tiết hơn để bạn dễ sửa
+                 throw new FileNotFoundException(
+                    $"KHÔNG TÌM THẤY APP!\n" +
+                    $"Đường dẫn máy đang tìm là: {appPath}\n" +
+                    $"--> Hãy chắc chắn bạn đã Build dự án MusicApp (chạy 'dotnet build' trong thư mục MusicApp).");
             }
 
-            // --- CẤU HÌNH KẾT NỐI ---
+            // --- CẤU HÌNH KẾT NỐI (Giữ nguyên) ---
             var appiumOptions = new AppiumOptions();
             appiumOptions.AddAdditionalCapability("app", appPath);
             appiumOptions.AddAdditionalCapability("deviceName", "WindowsPC");
-
+            // ... (Phần còn lại giữ nguyên) ...
             try
             {
                 _driver = new WindowsDriver<WindowsElement>(new Uri(WindowsApplicationDriverUrl), appiumOptions);
