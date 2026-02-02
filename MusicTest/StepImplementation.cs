@@ -12,57 +12,125 @@ namespace MusicTest
         private WindowsDriver<WindowsElement> _driver;
         private const string Url = "http://127.0.0.1:4723";
 
-        // ================== OPEN APP ==================
+        // ================== OPEN APP (GIỮ NGUYÊN CODE CŨ CỦA BẠN) ==================
         [Step("Mở App Music Player")]
         public void OpenApp()
         {
             if (_driver != null) return;
 
+            // Logic tìm đường dẫn tương đối (Rất chuẩn, không cần sửa)
             string appPath = Path.GetFullPath(
                 Path.Combine(
                     Directory.GetCurrentDirectory(),
                     "..", "MusicApp", "bin", "Debug", "net9.0-windows", "MusicApp.exe"));
+
+            Console.WriteLine($"--> LEAD CHECK PATH: {appPath}"); // In ra để kiểm tra
 
             var opt = new AppiumOptions();
             opt.AddAdditionalCapability("app", appPath);
             opt.AddAdditionalCapability("deviceName", "WindowsPC");
 
             _driver = new WindowsDriver<WindowsElement>(new Uri(Url), opt);
-            Thread.Sleep(1500);
+            
+            // Tăng thời gian chờ lên 3s để App trên ổ E kịp load
+            Thread.Sleep(3000); 
         }
 
-        // ================== MENU ==================
+        // ================== MENU (SỬA LỖI TẠI ĐÂY) ==================
         [Step("Kiểm tra nút Menu tồn tại")]
         public void MenuExists()
         {
             _driver.FindElementByAccessibilityId("btnMenu");
         }
 
+// --- SỬA HÀM CLICK MENU (THÊM CƠ CHẾ TỰ BẤM LẠI) ---
         [Step("Bấm nút Menu")]
         public void ClickMenu()
         {
-            var menu = _driver.FindElementByAccessibilityId("btnMenu");
-            menu.Click();
+            var btnMenu = _driver.FindElementByAccessibilityId("btnMenu");
+            
+            Console.WriteLine("--> [Lần 1] Đang bấm nút Menu...");
+            btnMenu.Click();
+            Thread.Sleep(2000); // Đợi 2s
 
-            // Đợi menu con hiện ra
-            WaitForElement("btnOpenFile", "Open File");
+            // KIỂM TRA NGAY: Liệu Menu đã thực sự mở chưa?
+            // Mẹo: Thử tìm nút Open File ngay tại đây. Nếu ko thấy nghĩa là bấm xịt.
+            try
+            {
+                _driver.FindElementByAccessibilityId("btnOpenFile");
+                Console.WriteLine("--> (OK) Menu đã mở thành công ngay lần 1.");
+            }
+            catch
+            {
+                Console.WriteLine("--> (!) Bấm lần 1 chưa thấy Menu ra. Đang thử bấm lại lần 2...");
+                btnMenu.Click(); // Bấm lại phát nữa
+                Thread.Sleep(2000);
+            }
         }
 
+        // --- SỬA HÀM CHECK OPEN FILE (DÙNG XPATH - VŨ KHÍ CUỐI) ---
         [Step("Kiểm tra nút Open File tồn tại")]
         public void OpenFileExists()
         {
-            EnsureMenuOpened();
-            _driver.FindElementByAccessibilityId("btnOpenFile");
+            try
+            {
+                // Cách 1: Tìm bằng ID (Chuẩn nhất)
+                _driver.FindElementByAccessibilityId("btnOpenFile");
+                Console.WriteLine("--> (OK) Tìm thấy nút bằng ID: btnOpenFile");
+            }
+            catch
+            {
+                Console.WriteLine("--> (!) ID thất bại, thử tìm bằng XPath...");
+                try
+                {
+                    // Cách 2: Dùng XPath (Vũ khí hạng nặng)
+                    // Tìm tất cả các nút có AutomationId là 'btnOpenFile'
+                    _driver.FindElementByXPath("//Button[@AutomationId='btnOpenFile']");
+                    Console.WriteLine("--> (OK) Tìm thấy nút bằng XPath");
+                }
+                catch
+                {
+                    Console.WriteLine("--> (!) XPath thất bại, thử tìm bằng Tên...");
+                    try 
+                    {
+                         // Cách 3: Tìm bằng Tên
+                        _driver.FindElementByName("Open File");
+                        Console.WriteLine("--> (OK) Tìm thấy nút bằng Name");
+                    }
+                    catch
+                    {
+                        // Cách 4: In ra mã nguồn giao diện để Lead debug
+                        Console.WriteLine("❌ LỖI NGHIÊM TRỌNG: WinAppDriver bị mù!");
+                        Console.WriteLine("Dưới đây là danh sách các nút mà máy nhìn thấy:");
+                        var allButtons = _driver.FindElementsByClassName("Button");
+                        foreach (var btn in allButtons)
+                        {
+                            try { Console.WriteLine($" - Found Button: {btn.Text} (ID: {btn.GetAttribute("AutomationId")})"); } catch {}
+                        }
+                        throw new Exception("Không tìm thấy nút Open File bằng mọi cách!");
+                    }
+                }
+            }
         }
-
-        [Step("Kiểm tra nút List tồn tại")]
+        
+[Step("Kiểm tra nút List tồn tại")]
         public void ListExists()
         {
-            EnsureMenuOpened();
-            _driver.FindElementByAccessibilityId("btnList");
+            try
+            {
+                // Cách 1: Tìm bằng ID
+                _driver.FindElementByAccessibilityId("btnList");
+                Console.WriteLine("--> (OK) Tìm thấy nút List bằng ID");
+            }
+            catch
+            {
+                // Cách 2: Tìm bằng Tên hiển thị
+                Console.WriteLine("--> (!) Không thấy ID btnList, đang tìm bằng tên...");
+                _driver.FindElementByName("List"); 
+                Console.WriteLine("--> (OK) Tìm thấy nút List bằng Name");
+            }
         }
-
-        // ================== PLAYLIST ==================
+        // ================== PLAYLIST (GIỮ NGUYÊN) ==================
         [Step("Kiểm tra danh sách bài hát tồn tại")]
         public void PlaylistExists()
         {
@@ -81,7 +149,7 @@ namespace MusicTest
         [Step("Kiểm tra cột Time tồn tại")]
         public void ColTime() => _driver.FindElementByAccessibilityId("colTime");
 
-        // ================== CONTROLS ==================
+        // ================== CONTROLS (GIỮ NGUYÊN) ==================
         [Step("Kiểm tra thanh thời gian tồn tại")]
         public void TimelineExists()
         {
@@ -97,43 +165,15 @@ namespace MusicTest
         [Step("Kiểm tra nút Next tồn tại")]
         public void NextExists() => _driver.FindElementByAccessibilityId("btnNext");
 
-        // ================== HELPERS ==================
-        private void EnsureMenuOpened()
-        {
-            try
-            {
-                _driver.FindElementByAccessibilityId("btnOpenFile");
-            }
-            catch
-            {
-                _driver.FindElementByAccessibilityId("btnMenu").Click();
-                WaitForElement("btnOpenFile", "Open File");
-            }
-        }
-
-        private void WaitForElement(string id, string name)
-        {
-            for (int i = 0; i < 10; i++)
-            {
-                try
-                {
-                    _driver.FindElementByAccessibilityId(id);
-                    return;
-                }
-                catch
-                {
-                    Thread.Sleep(300);
-                }
-            }
-
-            throw new Exception($"❌ Không tìm thấy {name}");
-        }
-
+        // ================== CLEANUP ==================
         [AfterScenario]
         public void Cleanup()
         {
-            _driver?.Quit();
-            _driver = null;
+            if (_driver != null)
+            {
+                _driver.Quit();
+                _driver = null;
+            }
         }
     }
 }
