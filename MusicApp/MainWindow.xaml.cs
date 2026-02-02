@@ -109,11 +109,12 @@ public partial class MainWindow : Window
 
     private void MenuButton_Click(object sender, RoutedEventArgs e)
     {
-        menuItemsPanel.Visibility = menuItemsPanel.Visibility == Visibility.Visible
+        menuItemsPanel.Visibility =
+            menuItemsPanel.Visibility == Visibility.Visible
             ? Visibility.Collapsed
             : Visibility.Visible;
     }
-
+    
     private void BtnPrev_Click(object sender, RoutedEventArgs e)
     {
         if (Playlist.Count == 0)
