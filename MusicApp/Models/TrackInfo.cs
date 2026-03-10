@@ -13,6 +13,8 @@ public class TrackInfo : INotifyPropertyChanged
     private string _durationText = "--:--";
     private byte[]? _artworkData;
     private bool _isVideo;
+    private bool _isFavorite;
+    private DateTime _lastPlayed;
 
     public int Sequence
     {
@@ -60,6 +62,18 @@ public class TrackInfo : INotifyPropertyChanged
     {
         get => _isVideo;
         set => SetField(ref _isVideo, value);
+    }
+
+    public bool IsFavorite
+    {
+        get => _isFavorite;
+        set => SetField(ref _isFavorite, value);
+    }
+
+    public DateTime LastPlayed
+    {
+        get => _lastPlayed;
+        set => SetField(ref _lastPlayed, value);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
