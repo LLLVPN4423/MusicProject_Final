@@ -5,7 +5,7 @@
 * Kiểm tra nút Menu tồn tại
 * Bấm nút Menu
 * Kiểm tra nút Open File tồn tại
-* Kiểm tra nút List tồn tại
+* Kiểm tra danh sách bài hát tồn tại
 
 ## Kiểm tra danh sách bài hát
 * Mở App Music Player
