@@ -7,7 +7,7 @@ public class TrackInfo : INotifyPropertyChanged
 {
     private int _sequence;
     private string _title = string.Empty;
-    private string _artist = "Unknown Artist";
+    private string _artist = "Chưa rõ ca sĩ";
     private string _filePath = string.Empty;
     private TimeSpan _duration = TimeSpan.Zero;
     private string _durationText = "--:--";

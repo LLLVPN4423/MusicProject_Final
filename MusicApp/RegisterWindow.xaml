@@ -1,0 +1,38 @@
+<Window x:Class="MusicApp.RegisterWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Đăng ký"
+        Height="380"
+        Width="520"
+        WindowStartupLocation="CenterOwner"
+        Background="#2F2D2C"
+        FontFamily="Bahnschrift">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Đăng ký" FontSize="24" FontWeight="Bold" Foreground="White"/>
+
+        <StackPanel Grid.Row="1" Margin="0,18,0,18">
+            <TextBlock Text="Tên đăng nhập" Foreground="#D6D1CF" Margin="0,0,0,6"/>
+            <TextBox x:Name="txtUsername" Height="38" Padding="10"/>
+
+            <TextBlock Text="Mật khẩu" Foreground="#D6D1CF" Margin="0,14,0,6"/>
+            <PasswordBox x:Name="txtPassword" Height="38" Padding="10"/>
+
+            <TextBlock Text="Nhập lại mật khẩu" Foreground="#D6D1CF" Margin="0,14,0,6"/>
+            <PasswordBox x:Name="txtPassword2" Height="38" Padding="10"/>
+
+            <TextBlock x:Name="txtError" Foreground="#FFB4B4" Margin="0,12,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Đăng ký" Width="120" Height="40" Click="BtnRegister_Click" Margin="0,0,10,0"/>
+            <Button Content="Đóng" Width="110" Height="40" Click="BtnClose_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
+

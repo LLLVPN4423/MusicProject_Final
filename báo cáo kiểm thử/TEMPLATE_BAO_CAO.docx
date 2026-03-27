@@ -1,0 +1,53 @@
+# TEMPLATE BÁO CÁO ĐỒ ÁN KIỂM THỬ PHẦN MỀM
+
+## Cấu trúc cần có:
+
+1. **BaoCao_KiemThu_MusicPlayer.docx** - File báo cáo chính
+2. **TestResults/** - Thư mục kết quả
+   - NUnit_Results.html
+   - Gauge_Reports/
+   - Coverage_Reports/
+3. **Screenshots/** - Hình ảnh demo
+4. **SourceCode/** - Code test thực tế
+5. **Config/** - Cấu hình tools
+6. **Videos/** - Video demo (nếu có)
+
+## Nội dung file báo cáo chính cần có:
+
+### Bìa & Lót bìa
+- Tên đồ án, sinh viên, giảng viên
+
+### Chương 1: Tổng quan (2-3 trang)
+- Giới thiệu Music Player
+- Chức năng chính
+- Công nghệ sử dụng
+- Mục tiêu kiểm thử
+
+### Chương 2: Black-box testing (4-5 trang)
+- Mô tả 2 chức năng
+- Test cases thiết kế
+- Kết quả thực tế
+- Screenshots
+
+### Chương 3: White-box testing (4-5 trang)
+- Mô tả 2 chức năng  
+- Phân tích mã nguồn
+- Test cases phủ nhánh
+- Branch coverage
+
+### Chương 4: Unit testing (2-3 trang)
+- Code NUnit tests
+- Kết quả chạy
+- Coverage report
+
+### Chương 5: Hiện thực (3-4 trang)
+- Cài đặt tools
+- Demo test tự động
+- Screenshots/video
+
+### Chương 6: Kết luận (1 trang)
+- Đánh giá kết quả
+- Bài học kinh nghiệm
+
+### Tài liệu tham khảo
+- Links, books, papers

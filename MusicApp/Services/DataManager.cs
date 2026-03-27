@@ -22,7 +22,7 @@ public static class DataManager
         try
         {
             var directory = Path.GetDirectoryName(FavoritesPath);
-            if (!Directory.Exists(directory))
+            if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
 
             var data = favorites.Select(f => new TrackData
@@ -41,7 +41,7 @@ public static class DataManager
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Lỗi lưu favorites: {ex.Message}", "Lỗi", 
+            System.Windows.MessageBox.Show($"Lỗi lưu Yêu thích: {ex.Message}", "Lỗi",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
     }
@@ -78,7 +78,7 @@ public static class DataManager
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Lỗi tải favorites: {ex.Message}", "Lỗi", 
+            System.Windows.MessageBox.Show($"Lỗi tải Yêu thích: {ex.Message}", "Lỗi",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
 
@@ -90,7 +90,7 @@ public static class DataManager
         try
         {
             var directory = Path.GetDirectoryName(HistoryPath);
-            if (!Directory.Exists(directory))
+            if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
 
             var data = history.Take(100).Select(h => new TrackData
@@ -110,7 +110,7 @@ public static class DataManager
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Lỗi lưu history: {ex.Message}", "Lỗi", 
+            System.Windows.MessageBox.Show($"Lỗi lưu Lịch sử: {ex.Message}", "Lỗi",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
     }
@@ -147,7 +147,7 @@ public static class DataManager
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Lỗi tải history: {ex.Message}", "Lỗi", 
+            System.Windows.MessageBox.Show($"Lỗi tải Lịch sử: {ex.Message}", "Lỗi",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
 

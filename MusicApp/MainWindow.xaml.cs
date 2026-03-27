@@ -28,13 +28,13 @@ public partial class MainWindow : Window
     private bool _isRepeat;
     private bool _isMuted;
     private double _previousVolume = 0.5;
+    private bool _enableShortcuts = true;
 
     public ObservableCollection<TrackInfo> Playlist { get; } = new();
     public ObservableCollection<TrackInfo> Favorites { get; } = new();
     public ObservableCollection<TrackInfo> History { get; } = new();
     public ObservableCollection<TrackInfo> SearchResults { get; private set; } = new();
 
-    private ObservableCollection<TrackInfo> _currentView = new();
     private string _currentSearchTerm = "";
 
     public MainWindow()
@@ -43,6 +43,9 @@ public partial class MainWindow : Window
         {
             InitializeComponent();
             DataContext = this;
+
+            KeyDown += MainWindowOnKeyDown;
+            Focusable = true;
 
             // Apply initial theme
             ApplyCurrentTheme();
@@ -74,11 +77,83 @@ public partial class MainWindow : Window
             _isMediaLoaded = false;
             btnPause.Content = "▶️"; // Icon play ban đầu
             lblStatus.Text = "Sẵn sàng";
+            lblMessage.Text = "";
+
+            // Apply system settings (volume + shortcuts)
+            var systemSettings = SystemSettingsManager.Load();
+            ApplySystemSettings(systemSettings);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"MainWindow initialization error: {ex.Message}");
             System.Windows.MessageBox.Show($"Lỗi khởi tạo ứng dụng: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    public void ApplySystemSettings(SystemSettings settings)
+    {
+        if (settings == null) return;
+
+        _enableShortcuts = settings.EnableShortcuts;
+
+        // Volume
+        var volume = Math.Max(0, Math.Min(1, settings.DefaultVolume));
+        _previousVolume = volume;
+
+        if (_mediaPlayer != null)
+            _mediaPlayer.Volume = volume;
+
+        if (sldVolume != null)
+            sldVolume.Value = volume;
+
+        // Update mute icon/button based on volume
+        if (volume <= 0)
+        {
+            _isMuted = true;
+            if (btnMute != null) btnMute.Content = "🔇";
+        }
+        else
+        {
+            _isMuted = false;
+            if (btnMute != null) btnMute.Content = volume < 0.5 ? "🔉" : "🔊";
+        }
+    }
+
+    private void MainWindowOnKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (!_enableShortcuts)
+            return;
+
+        // Ignore shortcuts while typing in text fields.
+        if (Keyboard.FocusedElement is System.Windows.Controls.TextBox ||
+            Keyboard.FocusedElement is System.Windows.Controls.PasswordBox)
+            return;
+
+        if (e.Key == Key.Space)
+        {
+            e.Handled = true;
+            BtnPause_Click(this, new RoutedEventArgs());
+            return;
+        }
+
+        if (e.Key == Key.Left)
+        {
+            e.Handled = true;
+            BtnPrev_Click(this, new RoutedEventArgs());
+            return;
+        }
+
+        if (e.Key == Key.Right)
+        {
+            e.Handled = true;
+            BtnNext_Click(this, new RoutedEventArgs());
+            return;
+        }
+
+        if (e.Key == Key.M)
+        {
+            e.Handled = true;
+            BtnMute_Click(this, new RoutedEventArgs());
         }
     }
 
@@ -159,7 +234,7 @@ public partial class MainWindow : Window
             if (dialog.ShowDialog() != true)
             {
                 System.Diagnostics.Debug.WriteLine("User cancelled file dialog");
-                lblStatus.Text = "Không có bài hát nào được thêm";
+                SetMessage("Không có bài hát nào được thêm");
                 return;
             }
 
@@ -175,19 +250,22 @@ public partial class MainWindow : Window
                     var duration = tagFile.Properties.Duration;
                     var artworkData = ExtractArtwork(tagFile.Tag.Pictures);
 
+                    var isVideo = IsVideoFile(filePath);
                     var track = new TrackInfo
                     {
-                        Title = string.IsNullOrWhiteSpace(tagFile.Tag.Title)
+                        Title = isVideo
                             ? Path.GetFileNameWithoutExtension(filePath)
-                            : tagFile.Tag.Title,
+                            : (string.IsNullOrWhiteSpace(tagFile.Tag.Title)
+                                ? Path.GetFileNameWithoutExtension(filePath)
+                                : tagFile.Tag.Title),
                         Artist = tagFile.Tag.Performers.Length > 0
                             ? string.Join(", ", tagFile.Tag.Performers)
-                            : "Unknown Artist",
+                            : "Chưa rõ ca sĩ",
                         Duration = duration,
                         DurationText = duration == TimeSpan.Zero ? "--:--" : FormatTimeSpan(duration),
                         FilePath = filePath,
                         ArtworkData = artworkData,
-                        IsVideo = IsVideoFile(filePath)
+                        IsVideo = isVideo
                     };
 
                     System.Diagnostics.Debug.WriteLine($"Created track: {track.Title} by {track.Artist}");
@@ -207,7 +285,7 @@ public partial class MainWindow : Window
             if (Playlist.Count == 0)
             {
                 System.Diagnostics.Debug.WriteLine("No valid tracks loaded");
-                lblStatus.Text = "Chưa có bài hát hợp lệ";
+                SetMessage("Chưa có bài hát hợp lệ");
                 return;
             }
 
@@ -219,7 +297,7 @@ public partial class MainWindow : Window
             else
             {
                 System.Diagnostics.Debug.WriteLine($"Not auto-playing, current index: {_currentTrackIndex}");
-                lblStatus.Text = $"Đã thêm {dialog.FileNames.Length} bài hát";
+                SetMessage($"Đã thêm {dialog.FileNames.Length} bài hát");
             }
         }
         catch (Exception ex)
@@ -231,7 +309,7 @@ public partial class MainWindow : Window
                 "Lỗi",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
-            lblStatus.Text = "Lỗi mở file";
+            SetMessage("Lỗi mở file");
         }
     }
 
@@ -242,7 +320,7 @@ public partial class MainWindow : Window
         
         if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK)
         {
-            lblStatus.Text = "Không có thư mục nào được chọn";
+            SetMessage("Không có thư mục nào được chọn");
             return;
         }
 
@@ -258,19 +336,22 @@ public partial class MainWindow : Window
                 var duration = tagFile.Properties.Duration;
                 var artworkData = ExtractArtwork(tagFile.Tag.Pictures);
 
+                var isVideo = IsVideoFile(filePath);
                 var track = new TrackInfo
                 {
-                    Title = string.IsNullOrWhiteSpace(tagFile.Tag.Title)
+                    Title = isVideo
                         ? Path.GetFileNameWithoutExtension(filePath)
-                        : tagFile.Tag.Title,
+                        : (string.IsNullOrWhiteSpace(tagFile.Tag.Title)
+                            ? Path.GetFileNameWithoutExtension(filePath)
+                            : tagFile.Tag.Title),
                     Artist = tagFile.Tag.Performers.Length > 0
                         ? string.Join(", ", tagFile.Tag.Performers)
-                        : "Unknown Artist",
+                        : "Chưa rõ ca sĩ",
                     Duration = duration,
                     DurationText = duration == TimeSpan.Zero ? "--:--" : FormatTimeSpan(duration),
                     FilePath = filePath,
                     ArtworkData = artworkData,
-                    IsVideo = IsVideoFile(filePath)
+                    IsVideo = isVideo
                 };
 
                 Playlist.Add(track);
@@ -290,7 +371,7 @@ public partial class MainWindow : Window
 
         if (addedCount == 0)
         {
-            lblStatus.Text = "Không có file audio hợp lệ trong thư mục";
+            SetMessage("Không có file audio hợp lệ trong thư mục");
             return;
         }
 
@@ -300,7 +381,7 @@ public partial class MainWindow : Window
         }
         else
         {
-            lblStatus.Text = $"Đã thêm {addedCount} bài hát từ thư mục";
+            SetMessage($"Đã thêm {addedCount} bài hát từ thư mục");
         }
     }
 
@@ -334,7 +415,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Prev button error: {ex.Message}");
-            lblStatus.Text = "Lỗi chuyển bài";
+            SetMessage("Lỗi chuyển bài");
         }
     }
 
@@ -360,7 +441,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Next button error: {ex.Message}");
-            lblStatus.Text = "Lỗi chuyển bài";
+            SetMessage("Lỗi chuyển bài");
         }
     }
 
@@ -376,7 +457,7 @@ public partial class MainWindow : Window
                     _mediaPlayer?.Pause();
                     _isPlaying = false;
                     btnPause.Content = "▶️"; // Icon play
-                    lblStatus.Text = "Đã dừng";
+                    lblStatus.Text = "Đã tạm dừng";
                 }
                 else
                 {
@@ -399,7 +480,7 @@ public partial class MainWindow : Window
                     }
                     else
                     {
-                        lblStatus.Text = "Không có bài hát để phát";
+                        SetMessage("Không có bài hát để phát");
                     }
                 }
             }
@@ -410,7 +491,7 @@ public partial class MainWindow : Window
             System.Diagnostics.Debug.WriteLine($"Pause button stack: {ex.StackTrace}");
             _isPlaying = false;
             btnPause.Content = "▶️";
-            lblStatus.Text = "Lỗi phát/dừng";
+            SetMessage("Lỗi phát/dừng");
         }
     }
 
@@ -448,7 +529,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (index < 0 || index >= Playlist?.Count)
+            if (index < 0 || index >= Playlist.Count)
             {
                 System.Diagnostics.Debug.WriteLine($"Invalid track index: {index}");
                 return;
@@ -473,12 +554,13 @@ public partial class MainWindow : Window
                 lvPlaylist.SelectedIndex = index;
                 lvPlaylist.ScrollIntoView(track);
 
-                lblTrackTitle.Text = track.Title ?? "Unknown Title";
-                lblArtist.Text = track.Artist ?? "Unknown Artist";
+                lblTrackTitle.Text = string.IsNullOrWhiteSpace(track.Title) ? "Chưa rõ tên bài hát" : track.Title;
+                lblArtist.Text = string.IsNullOrWhiteSpace(track.Artist) ? "Chưa rõ ca sĩ" : track.Artist;
                 lblStatus.Text = "Đang phát";
                 sldProgress.Value = 0;
 
                 DisplayTrackVisuals(track);
+                SyncFavoriteButton(track);
 
                 var durationText = track.Duration == TimeSpan.Zero
                     ? "00:00"
@@ -497,7 +579,7 @@ public partial class MainWindow : Window
                     "Lỗi phát nhạc",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
-                lblStatus.Text = "Lỗi phát nhạc";
+                SetMessage("Lỗi phát nhạc");
             }
         }
         catch (Exception ex)
@@ -507,7 +589,7 @@ public partial class MainWindow : Window
             _isPlaying = false;
             _isMediaLoaded = false;
             btnPause.Content = "▶️";
-            lblStatus.Text = "Lỗi phát nhạc";
+            SetMessage("Lỗi phát nhạc");
         }
     }
 
@@ -544,7 +626,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"MediaEnded error: {ex.Message}");
-            lblStatus.Text = "Lỗi khi kết thúc bài hát";
+            SetMessage("Lỗi khi kết thúc bài hát");
         }
     }
 
@@ -661,14 +743,14 @@ public partial class MainWindow : Window
     {
         _isShuffle = !_isShuffle;
         btnShuffle.Background = _isShuffle ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(192, 124, 199)) : new SolidColorBrush(System.Windows.Media.Color.FromRgb(246, 245, 242));
-        lblStatus.Text = _isShuffle ? "Bật phát ngẫu nhiên" : "Tắt phát ngẫu nhiên";
+        SetMessage(_isShuffle ? "Bật phát ngẫu nhiên" : "Tắt phát ngẫu nhiên");
     }
 
     private void BtnRepeat_Click(object sender, RoutedEventArgs e)
     {
         _isRepeat = !_isRepeat;
         btnRepeat.Background = _isRepeat ? new SolidColorBrush(System.Windows.Media.Color.FromRgb(192, 124, 199)) : new SolidColorBrush(System.Windows.Media.Color.FromRgb(246, 245, 242));
-        lblStatus.Text = _isRepeat ? "Bật lặp lại" : "Tắt lặp lại";
+        SetMessage(_isRepeat ? "Bật lặp lại" : "Tắt lặp lại");
     }
 
     private void BtnMute_Click(object sender, RoutedEventArgs e)
@@ -698,7 +780,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Mute button error: {ex.Message}");
-            lblStatus.Text = "Lỗi tắt/mở tiếng";
+            SetMessage("Lỗi tắt/mở tiếng");
         }
     }
 
@@ -729,7 +811,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Volume change error: {ex.Message}");
-            lblStatus.Text = "Lỗi điều chỉnh âm lượng";
+            SetMessage("Lỗi điều chỉnh âm lượng");
         }
     }
 
@@ -774,9 +856,9 @@ public partial class MainWindow : Window
         btnHistoryTab.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(141, 136, 134));
 
         UpdateCurrentView();
-        lblStatus.Text = string.IsNullOrWhiteSpace(_currentSearchTerm) 
-            ? "Danh sách phát hiện tại" 
-            : $"Tìm kiếm: {_currentSearchTerm} ({SearchResults.Count} kết quả)";
+        SetMessage(string.IsNullOrWhiteSpace(_currentSearchTerm)
+            ? "Danh sách phát"
+            : $"Tìm kiếm: {_currentSearchTerm} ({SearchResults.Count} kết quả)");
     }
 
     private void ShowFavoritesView()
@@ -790,9 +872,10 @@ public partial class MainWindow : Window
         btnHistoryTab.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(141, 136, 134));
 
         UpdateCurrentView();
-        lblStatus.Text = string.IsNullOrWhiteSpace(_currentSearchTerm) 
-            ? "Danh sách yêu thích" 
-            : $"Tìm kiếm: {_currentSearchTerm} ({SearchResults.Count} kết quả)";
+        RefreshFavoritesSequence();
+        SetMessage(string.IsNullOrWhiteSpace(_currentSearchTerm)
+            ? "Danh sách yêu thích"
+            : $"Tìm kiếm: {_currentSearchTerm} ({SearchResults.Count} kết quả)");
     }
 
     private void ShowHistoryView()
@@ -806,9 +889,10 @@ public partial class MainWindow : Window
         btnHistoryTab.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(192, 124, 199));
 
         UpdateCurrentView();
-        lblStatus.Text = string.IsNullOrWhiteSpace(_currentSearchTerm) 
-            ? "Lịch sử nghe nhạc" 
-            : $"Tìm kiếm: {_currentSearchTerm} ({SearchResults.Count} kết quả)";
+        RefreshHistorySequence();
+        SetMessage(string.IsNullOrWhiteSpace(_currentSearchTerm)
+            ? "Lịch sử nghe nhạc"
+            : $"Tìm kiếm: {_currentSearchTerm} ({SearchResults.Count} kết quả)");
     }
 
     private void RefreshFavoritesSequence()
@@ -839,8 +923,8 @@ public partial class MainWindow : Window
         // Add to beginning
         var historyTrack = new TrackInfo
         {
-            Title = track.Title,
-            Artist = track.Artist,
+            Title = string.IsNullOrWhiteSpace(track.Title) ? "Chưa rõ tên bài hát" : track.Title,
+            Artist = string.IsNullOrWhiteSpace(track.Artist) ? "Chưa rõ ca sĩ" : track.Artist,
             FilePath = track.FilePath,
             Duration = track.Duration,
             DurationText = track.DurationText,
@@ -909,16 +993,17 @@ public partial class MainWindow : Window
                     Duration = track.Duration,
                     DurationText = track.DurationText,
                     IsVideo = track.IsVideo,
-                    ArtworkData = track.ArtworkData
+                    ArtworkData = track.ArtworkData,
+                    IsFavorite = Favorites.Any(f => f.FilePath == track.FilePath)
                 };
                 Playlist.Add(newTrack);
                 RefreshSequenceNumbers();
             }
 
-            // Only auto-play if not already playing
-            if (!_isPlaying)
+            var index = Playlist.ToList().FindIndex(p => p.FilePath == track.FilePath);
+            if (index >= 0)
             {
-                PlayTrack(Playlist.Count - 1);
+                PlayTrack(index);
             }
         }
     }
@@ -930,19 +1015,18 @@ public partial class MainWindow : Window
             _currentSearchTerm = txtSearch?.Text ?? "";
             UpdateCurrentView();
             
-            if (!string.IsNullOrWhiteSpace(_currentSearchTerm))
-            {
-                lblStatus.Text = "Danh sách phát hiện tại";
-            }
-            else
-            {
-                lblStatus.Text = $"Tìm kiếm: {_currentSearchTerm} ({SearchResults?.Count ?? 0} kết quả)";
-            }
+            SetMessage(string.IsNullOrWhiteSpace(_currentSearchTerm)
+                ? (playlistView.Visibility == Visibility.Visible
+                    ? "Danh sách phát"
+                    : favoritesView.Visibility == Visibility.Visible
+                        ? "Danh sách yêu thích"
+                        : "Lịch sử nghe nhạc")
+                : $"Tìm kiếm: {_currentSearchTerm} ({SearchResults?.Count ?? 0} kết quả)");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Search error: {ex.Message}");
-            lblStatus.Text = "Lỗi tìm kiếm";
+            SetMessage("Lỗi tìm kiếm");
         }
     }
 
@@ -951,15 +1035,13 @@ public partial class MainWindow : Window
         txtSearch.Text = "";
         _currentSearchTerm = "";
         UpdateCurrentView();
-        lblStatus.Text = "Đã xóa tìm kiếm";
+        SetMessage("Đã xóa tìm kiếm");
     }
 
     private void UpdateCurrentView()
     {
         try
         {
-            _currentView.Clear();
-            
             if (playlistView.Visibility == Visibility.Visible)
             {
                 var source = string.IsNullOrWhiteSpace(_currentSearchTerm) 
@@ -1000,26 +1082,28 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"UpdateCurrentView error: {ex.Message}");
-            lblStatus.Text = "Lỗi cập nhật danh sách";
+            SetMessage("Lỗi cập nhật danh sách");
         }
     }
 
     private void BtnTheme_Click(object sender, RoutedEventArgs e)
     {
         ThemeManager.SwitchTheme();
-        lblStatus.Text = ThemeManager.CurrentTheme == Theme.Light ? "Giao diện Sáng" : "Giao diện Tối";
+        SetMessage(ThemeManager.CurrentTheme == Theme.Light ? "Giao diện Sáng" : "Giao diện Tối");
     }
 
     private void BtnSettings_Click(object sender, RoutedEventArgs e)
     {
-        lblStatus.Text = "Cài đặt ứng dụng";
+        var win = new SettingsWindow();
+        win.Owner = this;
+        win.ShowDialog();
     }
 
     private void BtnAbout_Click(object sender, RoutedEventArgs e)
     {
         System.Windows.MessageBox.Show(
-            "Music Player v1.0\n\nMột ứng dụng nghe nhạc đơn giản\nPhát triển với WPF và C#",
-            "Thông tin ứng dụng",
+            "Nhóm Pho\n\nLê Minh Phúc - Tống Minh Hiếu - Lý Thành Lợi\n\nHọc Phần: Công cụ và môi trường phát triển",
+            "Thông tin",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }
@@ -1028,5 +1112,132 @@ public partial class MainWindow : Window
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
         return extension is ".mp3" or ".wav" or ".wma" or ".aac" or ".flac" or ".ogg" or ".m4a";
+    }
+
+    private void SetMessage(string message)
+    {
+        if (lblMessage == null) return;
+        lblMessage.Text = message ?? "";
+    }
+
+    private void SyncFavoriteButton(TrackInfo? track)
+    {
+        if (btnToggleFavorite == null) return;
+        if (track == null)
+        {
+            btnToggleFavorite.Content = "🤍";
+            return;
+        }
+
+        var isFav = Favorites.Any(f => f.FilePath == track.FilePath) || track.IsFavorite;
+        track.IsFavorite = isFav;
+        btnToggleFavorite.Content = isFav ? "❤️" : "🤍";
+    }
+
+    private void BtnToggleFavorite_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentTrackIndex < 0 || _currentTrackIndex >= Playlist.Count)
+        {
+            SetMessage("Chưa có bài hát để yêu thích");
+            return;
+        }
+
+        ToggleFavorite(Playlist[_currentTrackIndex]);
+    }
+
+    private void BtnRowToggleFavorite_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button { DataContext: TrackInfo track })
+        {
+            ToggleFavorite(track);
+        }
+    }
+
+    private void ToggleFavorite(TrackInfo track)
+    {
+        var existing = Favorites.FirstOrDefault(f => f.FilePath == track.FilePath);
+        if (existing != null)
+        {
+            Favorites.Remove(existing);
+            SetMessage("Đã xóa khỏi Yêu thích");
+        }
+        else
+        {
+            Favorites.Insert(0, new TrackInfo
+            {
+                Title = string.IsNullOrWhiteSpace(track.Title) ? "Chưa rõ tên bài hát" : track.Title,
+                Artist = string.IsNullOrWhiteSpace(track.Artist) ? "Chưa rõ ca sĩ" : track.Artist,
+                FilePath = track.FilePath,
+                Duration = track.Duration,
+                DurationText = track.DurationText,
+                IsVideo = track.IsVideo,
+                ArtworkData = track.ArtworkData,
+                IsFavorite = true
+            });
+            SetMessage("Đã thêm vào Yêu thích");
+        }
+
+        // Sync IsFavorite across collections
+        var isFavNow = Favorites.Any(f => f.FilePath == track.FilePath);
+        foreach (var p in Playlist.Where(p => p.FilePath == track.FilePath))
+            p.IsFavorite = isFavNow;
+        foreach (var h in History.Where(h => h.FilePath == track.FilePath))
+            h.IsFavorite = isFavNow;
+
+        RefreshFavoritesSequence();
+        DataManager.SaveFavorites(Favorites);
+        SyncFavoriteButton(_currentTrackIndex >= 0 && _currentTrackIndex < Playlist.Count ? Playlist[_currentTrackIndex] : null);
+        UpdateCurrentView();
+    }
+
+    private void BtnRowDelete_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { DataContext: TrackInfo track })
+            return;
+
+        var index = Playlist.ToList().FindIndex(p => p.FilePath == track.FilePath);
+        if (index < 0) return;
+
+        DeleteFromPlaylist(index);
+    }
+
+    private void DeleteFromPlaylist(int index)
+    {
+        if (index < 0 || index >= Playlist.Count) return;
+
+        var wasCurrent = index == _currentTrackIndex;
+        Playlist.RemoveAt(index);
+        RefreshSequenceNumbers();
+        UpdateCurrentView();
+
+        if (Playlist.Count == 0)
+        {
+            _mediaPlayer.Stop();
+            _positionTimer?.Stop();
+            _isPlaying = false;
+            _isMediaLoaded = false;
+            _currentTrackIndex = -1;
+            btnPause.Content = "▶️";
+            lblTrackTitle.Text = "Chưa có bài hát";
+            lblArtist.Text = "Thêm bài hát để bắt đầu";
+            lblStatus.Text = "Sẵn sàng";
+            SyncFavoriteButton(null);
+            SetMessage("Danh sách phát đang trống");
+            sldProgress.Value = 0;
+            lblTimeDisplay.Text = "00:00 / 00:00";
+            return;
+        }
+
+        if (!wasCurrent)
+        {
+            if (index < _currentTrackIndex) _currentTrackIndex--;
+            SetMessage("Đã xóa khỏi danh sách phát");
+            return;
+        }
+
+        // If deleted current track: continue with next (same index), or last if index out of range.
+        var nextIndex = Math.Min(index, Playlist.Count - 1);
+        PlayTrack(nextIndex);
+        SetMessage("Đã xóa bài đang phát và chuyển bài");
     }
 }
